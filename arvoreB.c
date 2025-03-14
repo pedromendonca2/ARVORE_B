@@ -9,6 +9,19 @@ struct arvore{
     BT** filhos; // (sempre igual ao número de chaves armazenadas + 1)
 };
 
+void destroiBT(BT* x){
+    if(x == NULL) return;
+
+    for(int i=0; i<x->num_chaves+1; i++){
+        destroiBT(x->filhos[i]);
+    }
+
+    free(x->chaves);
+    free(x->registros);
+    free(x->filhos);
+    free(x);
+}
+
 BT* criaBT(){
     return NULL;
 }
@@ -35,7 +48,7 @@ BT* criaNode(bool ehFolha, int ordem){
     return bt;
 }
 
-void splitChild(BT* pai, int k, int ordem) {
+void divideFilho(BT* pai, int k, int ordem) {
     BT* filho = pai->filhos[k];
     BT* novoNode = criaNode(filho->ehFolha, ordem);
     
@@ -88,7 +101,7 @@ void insereNonFull(BT* x, int k, int reg, int ordem){
         i++;
 
         if(x->filhos[i]->num_chaves == ordem - 1){
-            separaFilho(x, i, ordem);
+            divideFilho(x, i, ordem);
 
             if(x->chaves[i] < k) i++;
         }
@@ -96,24 +109,30 @@ void insereNonFull(BT* x, int k, int reg, int ordem){
     }
 }
 
-void inserir(BT* x, int k, int reg, int ordem){
+BT* insere(BT* x, int k, int reg, int ordem){
     if(x == NULL) {
+        printf("CRIANDO RAIZ\n");
         BT* raiz = criaNode(true, ordem);
         raiz->registros[0] = reg;
         raiz->chaves[0] = k;
-        raiz->chaves++;
+        raiz->num_chaves++;
+        printf("Numero de chaves da raiz: %d\n", raiz->num_chaves);
+        printf("RAIZ CRIADA\n");
+        return raiz;
     } else {
+        printf("INSERINDO NA ARVORE PRONTA\n");
         if(x->num_chaves == ordem-1){
             BT* novoNode = criaNode(false, ordem);
             novoNode->filhos[0] = x;
-            separaFilho(novoNode, 0, ordem);
+            divideFilho(novoNode, 0, ordem);
         }
         insereNonFull(x, k, reg, ordem);
+        return x;
     }
 }
 
 BT* busca(FILE* f, BT* x, int k){
-    int i = 0;
+    int i = 0; //printf("CHAVE: %d\n", k);
 
     while(i < x->num_chaves && k > x->chaves[i]) i++;
 
@@ -128,4 +147,35 @@ BT* busca(FILE* f, BT* x, int k){
     }
     
     return busca(f, x->filhos[i], k);
+}
+
+void imprime(FILE* f, BT* x){
+    fprintf(f, "\n-- ARVORE B\n");
+
+    if(!x) return;
+
+    Queue* q = create_queue();
+    enqueue(q, x);
+    while (!is_empty(q)) {
+        BT* node = dequeue(q);
+        fprintf(f, "[");
+        //printf("NUM CHAVES: %d\n", node->num_chaves);
+        for (int i = 0; i < node->num_chaves; i++) {
+            fprintf(f, "key: %d, ", node->chaves[i]);
+        }
+        fprintf(f, "]");
+        if (!node->ehFolha) {
+            fprintf(f, "\n");
+            for (int i = 0; i <= node->num_chaves; i++) {
+                if (node->filhos[i]) {
+                    enqueue(q, node->filhos[i]);
+                }
+            }
+        }
+    }
+    free(q);
+}
+
+int retornaNumChaves(BT* x){
+    return x->num_chaves;
 }
