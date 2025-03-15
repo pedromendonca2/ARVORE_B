@@ -1,5 +1,4 @@
-O REGISTRO NAO ESTA NA ARVORE!
-O REGISTRO ESTA NA ARVORE!
 
 -- ARVORE B
-[key: 20, ]
+[key: 55, key: 75, ]
+[key: 20, key: 51, ][key: 62, ][key: 77, key: 78, ]

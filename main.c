@@ -57,6 +57,7 @@ int main(int argc, char* argv[]){
             }
         } else{
             printf("Operação inválida\n");
+            printf("%s\n", linha);
             exit(1);
         }
     }
@@ -65,7 +66,7 @@ int main(int argc, char* argv[]){
     imprime(output, bt);
     printf("Imprimi_final\n");
 
-    //destroiBT(bt);
+    destroiBT(bt);
     fclose(input);
     fclose(output);
     return 0;
