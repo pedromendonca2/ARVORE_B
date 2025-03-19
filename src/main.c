@@ -3,8 +3,8 @@
 #define MAX_LINHA 50
 
 int main(int argc, char* argv[]){
-    if (argc < 2) {
-        fprintf(stderr, "Uso: %s <arquivo de entrada>\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Uso: %s <arquivo de entrada> <arquivo de saida>\n", argv[0]);
         return 1;
     }
 
@@ -16,7 +16,7 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    FILE* output = fopen("saida.txt", "w");
+    FILE* output = fopen(argv[2], "w");
     if (output == NULL) {
         perror("Erro ao abrir o arquivo de saída");
         fclose(input);

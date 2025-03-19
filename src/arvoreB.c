@@ -180,19 +180,27 @@ void imprime(FILE* f, BT* x){
 
     Queue* q = create_queue();
     enqueue(q, x);
+    enqueue(q, NULL);
+
     while (!is_empty(q)) {
         BT* node = dequeue(q);
-        fprintf(f, "[");
-        //printf("NUM CHAVES: %d\n", node->num_chaves);
-        for (int i = 0; i < node->num_chaves; i++) {
-            fprintf(f, "key: %d, ", node->chaves[i]);
-        }
-        fprintf(f, "]");
-        if (!node->ehFolha) {
+        
+        if (node == NULL) {
             fprintf(f, "\n");
-            for (int i = 0; i <= node->num_chaves; i++) {
-                if (node->filhos[i]) {
-                    enqueue(q, node->filhos[i]);
+            if (!is_empty(q)) {
+                enqueue(q, NULL); // Adiciona marcador de nível para o próximo nível
+            }
+        } else {
+            fprintf(f, "[");
+            for (int i = 0; i < node->num_chaves; i++) {
+                fprintf(f, "key: %d, ", node->chaves[i]);
+            }
+            fprintf(f, "]");
+            if (!node->ehFolha) {
+                for (int i = 0; i <= node->num_chaves; i++) {
+                    if (node->filhos[i]) {
+                        enqueue(q, node->filhos[i]);
+                    }
                 }
             }
         }
