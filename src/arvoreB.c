@@ -138,14 +138,12 @@ BT* insere(BT* x, int k, int reg, int ordem){
         raiz->registros[0] = reg;
         raiz->chaves[0] = k;
         raiz->num_chaves++;
-        if(ordem % 2 == 0)
-            ordem -= 1;
         //printf("Numero de chaves da raiz: %d\n", raiz->num_chaves);
         //printf("RAIZ CRIADA\n");
         return raiz;
     } else { //insere no mesmo nó se não estiver cheio, e cria outro se estiver
         //printf("INSERINDO NA ARVORE PRONTA\n");
-        if(x->num_chaves == ordem){ //se a raiz está cheia, cria um novo nó
+        if(x->num_chaves == ordem-1){ //se a raiz está cheia, cria um novo nó
             BT* novoNode = criaNode(false, ordem);
             novoNode->filhos[0] = x; //o novo nó se torna a raiz e o antigo nó se torna um filho
             divideFilho(novoNode, 0, ordem); //divide o antigo nó
