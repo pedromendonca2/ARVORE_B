@@ -45,11 +45,11 @@ int main(int argc, char* argv[]){
                 bt = insere(bt, n1, n2, ordem);
                 printf("Inseri_final\n");
             }
-        } else if (sscanf(linha, "%c %d", &operacao, &n1) == 2) {
+        } else if (sscanf(linha, " %c %d", &operacao, &n1) == 2) {
             //printf("Entrei aqui\n");
             if (operacao == 'R') {
-                // printf("Removi\n");
-                // remover(n1);
+                printf("Começando a remoção\n");
+                bt = removeKey(bt, n1, ordem);
             } else if (operacao == 'B') {
                 printf("Busquei\n");
                 busca(output, bt, n1);

@@ -214,9 +214,17 @@ int retornaNumChaves(BT* x){
     return x->num_chaves;
 }
 
-// Funções de Remoção (Implementação Completa)
+// Funções de Remoção 
 
-// Função auxiliar: Encontra o predecessor de uma chave em um nó não folha
+/**
+ * @brief Função interna que encontra o predecessor de uma chave em um nó não folha.
+ *
+ * O predecessor é a maior chave na subárvore à esquerda da chave.
+ *
+ * @param node O nó não folha.
+ * @param index O índice da chave cujo predecessor está sendo procurado.
+ * @return A chave predecessora.
+ */
 int encontraPredecessor(BT* node, int index) {
     BT* current = node->filhos[index];
     while (!current->ehFolha) {
@@ -225,7 +233,15 @@ int encontraPredecessor(BT* node, int index) {
     return current->chaves[current->num_chaves - 1]; // Retorna a chave mais à direita (maior)
 }
 
-// Função auxiliar: Encontra o sucessor de uma chave em um nó não folha
+/**
+ * @brief Função interna que o sucessor de uma chave em um nó não folha.
+ *
+ * O sucessor é a menor chave na subárvore à direita da chave.
+ *
+ * @param node O nó não folha.
+ * @param index O índice da chave cujo sucessor está sendo procurado.
+ * @return A chave sucessora.
+ */
 int encontraSucessor(BT* node, int index) {
     BT* current = node->filhos[index + 1];
     while (!current->ehFolha) {
@@ -234,7 +250,16 @@ int encontraSucessor(BT* node, int index) {
     return current->chaves[0]; // Retorna a chave mais à esquerda (menor)
 }
 
-// Função auxiliar:  Mescla dois filhos de um nó
+/**
+ * @brief Função interna que mescla dois filhos de um nó.
+ *
+ * Esta função é chamada quando um nó filho tem menos que o número mínimo de chaves
+ * durante a remoção. Ela mescla o filho com um de seus irmãos adjacentes.
+ *
+ * @param node O nó pai.
+ * @param index O índice do filho que será mesclado com seu irmão à direita.
+ * @param ordem A ordem da Árvore B.
+ */
 void mergeFilhos(BT* node, int index, int ordem) {
     BT* filhoEsquerda = node->filhos[index];
     BT* filhoDireita = node->filhos[index + 1];
@@ -276,7 +301,15 @@ void mergeFilhos(BT* node, int index, int ordem) {
 
 
 
-// Função auxiliar: Remove uma chave de um nó folha
+/**
+ * @brief Função interna que remove uma chave de um nó folha.
+ *
+ * Simplesmente desloca as chaves e registros subsequentes para a esquerda para
+ * preencher o espaço da chave removida.
+ *
+ * @param node O nó folha.
+ * @param index O índice da chave a ser removida.
+ */
 void removeDeFolha(BT* node, int index) {
     // Desloca todas as chaves e registros após o índice para a esquerda
     for (int i = index + 1; i < node->num_chaves; i++) {
@@ -286,7 +319,22 @@ void removeDeFolha(BT* node, int index) {
     node->num_chaves--; // Decrementa o número de chaves
 }
 
-// Função auxiliar: Remove uma chave de um nó não folha
+/**
+ * @brief Função interna que remove uma chave de um nó não folha.
+ *
+ * Esta função lida com os três casos de remoção em um nó não folha:
+ *   1. Se o filho predecessor tiver chaves suficientes, substitui a chave a ser
+ *      removida pelo seu predecessor e remove recursivamente o predecessor.
+ *   2. Se o filho sucessor tiver chaves suficientes, substitui a chave a ser
+ *      removida pelo seu sucessor e remove recursivamente o sucessor.
+ *   3. Se nenhum dos filhos adjacentes tiver chaves suficientes, mescla os dois
+ *      filhos, move a chave do pai para o nó mesclado e remove recursivamente
+ *      a chave do nó mesclado.
+ *
+ * @param node O nó não folha.
+ * @param index O índice da chave a ser removida.
+ * @param ordem A ordem da arvore B.
+ */
 void removeDeNaoFolha(BT* node, int index, int ordem) {
     int k = node->chaves[index];
 
@@ -311,7 +359,16 @@ void removeDeNaoFolha(BT* node, int index, int ordem) {
     }
 }
 
-// Função auxiliar: Empresta uma chave do irmão da esquerda
+/**
+ * @brief Função interna que empresta uma chave do irmão anterior (esquerda).
+ *
+ * Move a chave mais à direita do irmão esquerdo para o pai e a chave do pai
+ * para o filho que precisa de uma chave.  Ajusta os ponteiros dos filhos, se
+ * necessário.
+ *
+ * @param node O nó pai.
+ * @param index O índice do filho que precisa emprestar uma chave.
+ */
 void emprestaDoAnterior(BT* node, int index) {
 
     BT* filho = node->filhos[index];
@@ -348,7 +405,16 @@ void emprestaDoAnterior(BT* node, int index) {
     irmao->num_chaves--;
 }
 
-// Função auxiliar: Empresta uma chave do irmão da direita
+/**
+ * @brief Função interna que empresta uma chave do próximo irmão (direita).
+ *
+ * Move a chave mais à esquerda do irmão direito para o pai e a chave do pai
+ * para o filho que precisa de uma chave. Ajusta os ponteiros dos filhos, se
+ * necessário.
+ *
+ * @param node O nó pai.
+ * @param index O índice do filho que precisa emprestar uma chave.
+ */
 void emprestaDoProximo(BT* node, int index) {
 
     BT* filho = node->filhos[index];
@@ -387,7 +453,18 @@ void emprestaDoProximo(BT* node, int index) {
 
 
 
-// Função auxiliar: Garante que um nó tenha pelo menos t chaves após uma remoção
+/**
+ * @brief Função interna que garante que um nó filho tenha pelo menos o número mínimo de chaves
+ *        após uma remoção.
+ *
+ * Se o filho tiver menos que o número mínimo de chaves, tenta emprestar uma chave
+ * de um irmão adjacente. Se nenhum irmão tiver chaves suficientes para emprestar,
+ * mescla o filho com um irmão.
+ *
+ * @param node O nó pai.
+ * @param index O índice do filho que precisa ter chaves suficientes.
+ * @param ordem A ordem da arvore B
+ */
 void preenche(BT* node, int index, int ordem) {
     //Se o filho anterior (index-1) tiver mais de t-1 chaves, empresta dele
     if (index != 0 && node->filhos[index - 1]->num_chaves >= ordem/2 ) {
@@ -409,7 +486,17 @@ void preenche(BT* node, int index, int ordem) {
 
 
 
-// Função principal de remoção (recursiva)
+/**
+ * @brief Função interna recursiva principal para remover uma chave da Árvore B.
+ *
+ * Encontra a chave a ser removida e chama as funções auxiliares apropriadas
+ * para realizar a remoção, dependendo se a chave está em um nó folha ou não folha,
+ * e se os filhos têm o número mínimo de chaves.
+ *
+ * @param node O nó atual sendo examinado.
+ * @param k A chave a ser removida.
+ * @param ordem A ordem da Árvore B.
+ */
 void removeRec(BT* node, int k, int ordem) {
     int index = 0;
     while (index < node->num_chaves && k > node->chaves[index]) {
