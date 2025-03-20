@@ -1,0 +1,4 @@
+
+-- ARVORE B
+[key: 17, ]
+[key: 6, ][key: 20, key: 50, ]
