@@ -1,21 +1,25 @@
 #include "arvoreB.h"
 
 struct arvore{
+    int ordem;
+    int num_nodes;
+    Node* raiz;
+};
+
+struct node{
     int num_chaves; // p/ nós internos e folhas, o min. de chaves é (t/2) − 1 e o max. é ́t − 1, já p/ a raíz, o min. de chaves é 1 e o max. é t − 1
     bool ehFolha;
     int deslocamento; // A posição do nó  no arquivo binário (o deslocamento em bytes para acessar/atualizar este nó dentro do arquivo binario)
     int* chaves; // Este número está no intervalo [⌈t/2⌉−1, t−1] para nós internos e folhas, e entre [1,t−1] para a raiz.
     int* registros; // cada um indexado por uma chave 
-    BT** filhos; // (sempre igual ao número de chaves armazenadas + 1)
+    Node** filhos; // (sempre igual ao número de chaves armazenadas + 1)
 };
 
-void removeRec(BT* node, int k, int ordem);
-
-void destroiBT(BT* x){
+void destroiNode(Node* x){
     if(x == NULL) return;
 
     for(int i=0; i<x->num_chaves+1; i++){
-        destroiBT(x->filhos[i]);
+        destroiNode(x->filhos[i]);
     }
 
     free(x->chaves);
@@ -24,140 +28,164 @@ void destroiBT(BT* x){
     free(x);
 }
 
-BT* criaBT(){
-    return NULL;
+void destroiBT(BT* x){
+    if(x == NULL) return;
+
+    destroiNode(x->raiz);
+    free(x);
 }
 
-BT* criaNode(bool ehFolha, int ordem){
+BT* criaBT(int ordem){
     BT* bt = malloc(sizeof(BT));
     if(bt == NULL){ 
         perror("Memory allocation failed"); 
         exit(1);
     }
 
-    bt->num_chaves = 0;
-    bt->ehFolha = ehFolha;
-
-    bt->chaves = malloc((ordem-1) * (sizeof(int)));
-    bt->registros = malloc((ordem-1) * (sizeof(int)));
-    bt->filhos = malloc(ordem * sizeof(BT*));
-    
-    for(int i=0; i<ordem; i++){
-        bt->filhos[i] = NULL;
-    }
-
-    // for (int i = 0; i < ordem - 1; i++) {
-    //     bt->chaves[i] = -1;
-    //     bt->registros[i] = -1;
-    // }
-
-    //bt->deslocamento = 0;
+    bt->ordem = ordem;
+    bt->num_nodes = 0;
+    bt->raiz = NULL;
 
     return bt;
 }
 
-void divideFilho(BT* pai, int k, int ordem) {
-    BT* filho = pai->filhos[k]; //filho da esquerda
+Node* criaNode(BT* bt, bool ehFolha){
+    Node* x = malloc(sizeof(Node));
+    if(x == NULL){ 
+        perror("Memory allocation failed"); 
+        exit(1);
+    }
 
-    // printf("Dividindo nó...\n");
-    // printf("Antes da divisão, chaves do filho: ");
-    // for (int i = 0; i < filho->num_chaves; i++) {
-    //     printf("%d ", filho->chaves[i]);
-    // }
-    // printf("\n");
+    x->num_chaves = 0;
+    x->ehFolha = ehFolha;
 
-    BT* novoNode = criaNode(filho->ehFolha, ordem); //cria nó que armazena a metade superior das chaves
-    int meio = (ordem - 1) / 2; //(ordem - 1) / 2
-    novoNode->num_chaves = filho->num_chaves - meio - 1; //meio - 1
+    x->chaves = malloc((bt->ordem) * sizeof(int));
+    x->registros = malloc((bt->ordem) * sizeof(int));
+    x->filhos = malloc((bt->ordem + 1) * sizeof(Node*));
     
-    for (int i = 0; i < novoNode->num_chaves; i++) { //copia as chaves e registros da metade superior do nó filho para o novo nó
+    for(int i=0; i<bt->ordem; i++){
+        x->filhos[i] = NULL;
+    }
+
+    //x->deslocamento = 0;
+
+    return x;
+}
+
+// Função para dividir um nó cheio
+void divideFilho(BT* bt, Node* pai, int k) {
+    Node* filho = pai->filhos[k]; //filho da esquerda
+    Node* novoNode = criaNode(bt, filho->ehFolha); //filho da direita
+
+    int meio;
+    if(bt->ordem == 3){
+        meio = 1;
+    } else{
+        meio = (bt->ordem / 2) - 1;
+    }
+
+    // Copia as chaves e registros para o novo nó
+    for (int i = 0; i < bt->ordem - meio - 1; i++) {
         novoNode->chaves[i] = filho->chaves[i + meio + 1];
         novoNode->registros[i] = filho->registros[i + meio + 1];
     }
-    
-    if (!filho->ehFolha) { //se o filho não for folha, os ponteiros para os filhos são copiados para o novo nó
-        for (int i = 0; i <= novoNode->num_chaves; i++) {
+
+    if (!filho->ehFolha) {
+        for (int i = 0; i <= bt->ordem - meio - 1; i++) {
             novoNode->filhos[i] = filho->filhos[i + meio + 1];
         }
     }
 
-    // printf("Novo nó criado com chaves: ");
-    // for (int i = 0; i < novoNode->num_chaves; i++) {
-    //     printf("%d ", novoNode->chaves[i]);
-    // }
-    // printf("\n");
-    
+    novoNode->num_chaves = bt->ordem - meio - 1;
     filho->num_chaves = meio;
-    
-    //printf("Numero de chaves do pai: %d\n", pai->num_chaves);
-    for (int i = pai->num_chaves; i > k; i--) { //desloca os ponteiros para os filhos do pai para abrir espaço para o novo nó
+
+    // Desloca os filhos do pai para abrir espaço para o novo nó
+    for (int i = pai->num_chaves; i > k; i--) {
         pai->filhos[i + 1] = pai->filhos[i];
     }
+
     pai->filhos[k + 1] = novoNode;
-    
-    for (int i = pai->num_chaves - 1; i >= k; i--) { //desloca as chaves do pai para abrir espaço para a chave promovida
+
+    // Desloca as chaves do pai para abrir espaço para a chave promovida
+    for (int i = pai->num_chaves - 1; i >= k; i--) {
         pai->chaves[i + 1] = pai->chaves[i];
         pai->registros[i + 1] = pai->registros[i];
     }
-    
-    // a chave do meio do nó filho é promovida para o nó pai
+
+    // Promove a chave do meio para o pai
     pai->chaves[k] = filho->chaves[meio];
     pai->registros[k] = filho->registros[meio];
     pai->num_chaves++;
-
-    // filho->chaves[meio] = -1;
-    // filho->registros[meio] = -1;
 }
 
-void insereNonFull(BT* x, int k, int reg, int ordem){
-    int i = x->num_chaves - 1;
+// Função recursiva para inserir uma chave na árvore B
+Node* insereNode(BT* bt, Node* node, int chave, int reg) {
+    bt->num_nodes++;
 
-    if(x->ehFolha){ //se for folha, insere direto
-        while(i >= 0 && x->chaves[i] > k){ //desloca as chaves maiores para a direita
-            x->chaves[i+1] = x->chaves[i];
-            x->registros[i+1] = x->registros[i];
-            i--;
+    if (node == NULL) {
+        // Se a árvore estiver vazia, cria um novo nó folha como node
+        Node* novoNode = criaNode(bt, true);
+        novoNode->chaves[0] = chave;
+        novoNode->registros[0] = reg;
+        novoNode->num_chaves = 1;
+        return novoNode;
+    }
+
+    // Encontra a posição correta para descer na árvore
+    int i = node->num_chaves - 1;
+    while (i >= 0 && chave < node->chaves[i]) {
+        i--;
+    }
+
+    if (i >= 0 && chave == node->chaves[i]) {
+        // Chave já existe, atualiza o registro
+        node->registros[i] = reg;
+        return node;
+    }
+
+    if (node->ehFolha) {
+        // Insere a chave diretamente na folha, mesmo que exceda a capacidade temporariamente
+        for (int j = node->num_chaves; j > i + 1; j--) {
+            node->chaves[j] = node->chaves[j - 1];
+            node->registros[j] = node->registros[j - 1];
         }
-        x->chaves[i+1] = k;
-        x->registros[i+1] = reg;
-        x->num_chaves++;
-    } else{ //se não for folha, insere em algum filho
-        while(i>=0 && x->chaves[i] > k) i--;
+        node->chaves[i + 1] = chave;
+        node->registros[i + 1] = reg;
+        node->num_chaves++;
+
+        // Se o nó não excedeu a capacidade, retorna imediatamente
+        if (node->num_chaves <= bt->ordem - 1) {
+            return node;
+        }
+
+        // Se o nó excedeu a capacidade, divide-o antes de retornar
+        Node* novoNode = criaNode(bt, false);
+        novoNode->filhos[0] = node;
+        divideFilho(bt, novoNode, 0);
+
+        return novoNode;
+    } else {
+        // Desce para o filho correto
         i++;
+        node->filhos[i] = insereNode(bt, node->filhos[i], chave, reg);
 
-        if(x->filhos[i]->num_chaves == ordem - 1){ //se filho estiver cheio, divide e escolhe o filho certo
-            divideFilho(x, i, ordem);
-            if(x->chaves[i] < k) i++; //decide em qual filho inserir
+        // Verifica se o filho ficou cheio após a inserção
+        if (node->filhos[i]->num_chaves == bt->ordem) {
+            divideFilho(bt, node, i);
         }
-        insereNonFull(x->filhos[i], k, reg, ordem);
+
+        return node;
     }
 }
 
-BT* insere(BT* x, int k, int reg, int ordem){
-    if(x == NULL) { //se a árvore for vazia, cria a sua raíz
-        //printf("CRIANDO RAIZ\n");
-        BT* raiz = criaNode(true, ordem);
-        raiz->registros[0] = reg;
-        raiz->chaves[0] = k;
-        raiz->num_chaves++;
-        //printf("Numero de chaves da raiz: %d\n", raiz->num_chaves);
-        //printf("RAIZ CRIADA\n");
-        return raiz;
-    } else { //insere no mesmo nó se não estiver cheio, e cria outro se estiver
-        //printf("INSERINDO NA ARVORE PRONTA\n");
-        if(x->num_chaves == ordem-1){ //se a raiz está cheia, cria um novo nó
-            BT* novoNode = criaNode(false, ordem);
-            novoNode->filhos[0] = x; //o novo nó se torna a raiz e o antigo nó se torna um filho
-            divideFilho(novoNode, 0, ordem); //divide o antigo nó
-            insereNonFull(novoNode, k, reg, ordem); //insere a chave no novo nó
-            return novoNode;
-        }
-        insereNonFull(x, k, reg, ordem);
-        return x;
+void insere(BT* bt, int k, int reg){
+    Node* novaRaiz = insereNode(bt, bt->raiz, k, reg);
+    if (novaRaiz != bt->raiz) {
+        bt->raiz = novaRaiz;
     }
 }
 
-BT* busca(FILE* f, BT* x, int k){
+Node* buscaNode(FILE* f, Node* x, int k){
     int i = 0; //printf("CHAVE: %d\n", k);
 
     while(i < x->num_chaves && k > x->chaves[i]) i++;
@@ -172,12 +200,18 @@ BT* busca(FILE* f, BT* x, int k){
         return NULL;
     }
     
-    return busca(f, x->filhos[i], k);
+    return buscaNode(f, x->filhos[i], k);
 }
 
-void imprime(FILE* f, BT* x){
+void busca(FILE* f, BT* bt, int k){
+    //Node* x = bt->raiz;
+    buscaNode(f, bt->raiz, k);
+}
+
+void imprime(FILE* f, BT* bt){
     fprintf(f, "\n-- ARVORE B\n");
 
+    Node* x = bt->raiz;
     if(!x) return;
 
     Queue* q = create_queue();
@@ -185,7 +219,7 @@ void imprime(FILE* f, BT* x){
     enqueue(q, NULL);
 
     while (!is_empty(q)) {
-        BT* node = dequeue(q);
+        Node* node = dequeue(q);
         
         if (node == NULL) {
             fprintf(f, "\n");
@@ -210,11 +244,10 @@ void imprime(FILE* f, BT* x){
     free(q);
 }
 
-int retornaNumChaves(BT* x){
+// Funções de Remoção 
+int retornaNumChaves(Node* x){
     return x->num_chaves;
 }
-
-// Funções de Remoção 
 
 /**
  * @brief Função interna que encontra o predecessor de uma chave em um nó não folha.
@@ -225,8 +258,8 @@ int retornaNumChaves(BT* x){
  * @param index O índice da chave cujo predecessor está sendo procurado.
  * @return A chave predecessora.
  */
-int encontraPredecessor(BT* node, int index) {
-    BT* current = node->filhos[index];
+int encontraPredecessor(Node* node, int index) {
+    Node* current = node->filhos[index];
     while (!current->ehFolha) {
         current = current->filhos[current->num_chaves]; // Vai para o filho mais à direita
     }
@@ -242,8 +275,8 @@ int encontraPredecessor(BT* node, int index) {
  * @param index O índice da chave cujo sucessor está sendo procurado.
  * @return A chave sucessora.
  */
-int encontraSucessor(BT* node, int index) {
-    BT* current = node->filhos[index + 1];
+int encontraSucessor(Node* node, int index) {
+    Node* current = node->filhos[index + 1];
     while (!current->ehFolha) {
         current = current->filhos[0]; // Vai para o filho mais à esquerda
     }
@@ -260,9 +293,9 @@ int encontraSucessor(BT* node, int index) {
  * @param index O índice do filho que será mesclado com seu irmão à direita.
  * @param ordem A ordem da Árvore B.
  */
-void mergeFilhos(BT* node, int index, int ordem) {
-    BT* filhoEsquerda = node->filhos[index];
-    BT* filhoDireita = node->filhos[index + 1];
+void mergeFilhos(Node* node, int index, int ordem) {
+    Node* filhoEsquerda = node->filhos[index];
+    Node* filhoDireita = node->filhos[index + 1];
 
     // Move a chave do pai para o final do filho da esquerda
     filhoEsquerda->chaves[filhoEsquerda->num_chaves] = node->chaves[index];
@@ -310,7 +343,7 @@ void mergeFilhos(BT* node, int index, int ordem) {
  * @param node O nó folha.
  * @param index O índice da chave a ser removida.
  */
-void removeDeFolha(BT* node, int index) {
+void removeDeFolha(Node* node, int index) {
     // Desloca todas as chaves e registros após o índice para a esquerda
     for (int i = index + 1; i < node->num_chaves; i++) {
         node->chaves[i - 1] = node->chaves[i];
@@ -335,7 +368,7 @@ void removeDeFolha(BT* node, int index) {
  * @param index O índice da chave a ser removida.
  * @param ordem A ordem da arvore B.
  */
-void removeDeNaoFolha(BT* node, int index, int ordem) {
+void removeDeNaoFolha(Node* node, int index, int ordem) {
     int k = node->chaves[index];
 
     // Caso 1: Se o filho que precede k (filhos[index]) tem pelo menos t chaves
@@ -369,10 +402,10 @@ void removeDeNaoFolha(BT* node, int index, int ordem) {
  * @param node O nó pai.
  * @param index O índice do filho que precisa emprestar uma chave.
  */
-void emprestaDoAnterior(BT* node, int index) {
+void emprestaDoAnterior(Node* node, int index) {
 
-    BT* filho = node->filhos[index];
-    BT* irmao = node->filhos[index - 1];
+    Node* filho = node->filhos[index];
+    Node* irmao = node->filhos[index - 1];
 
     // Desloca todas as chaves em filho uma posição para a direita
     for (int i = filho->num_chaves - 1; i >= 0; i--) {
@@ -415,10 +448,10 @@ void emprestaDoAnterior(BT* node, int index) {
  * @param node O nó pai.
  * @param index O índice do filho que precisa emprestar uma chave.
  */
-void emprestaDoProximo(BT* node, int index) {
+void emprestaDoProximo(Node* node, int index) {
 
-    BT* filho = node->filhos[index];
-    BT* irmao = node->filhos[index + 1];
+    Node* filho = node->filhos[index];
+    Node* irmao = node->filhos[index + 1];
 
     // Move a chave do pai para a última posição do filho
     filho->chaves[filho->num_chaves] = node->chaves[index];
@@ -465,7 +498,7 @@ void emprestaDoProximo(BT* node, int index) {
  * @param index O índice do filho que precisa ter chaves suficientes.
  * @param ordem A ordem da arvore B
  */
-void preenche(BT* node, int index, int ordem) {
+void preenche(Node* node, int index, int ordem) {
     //Se o filho anterior (index-1) tiver mais de t-1 chaves, empresta dele
     if (index != 0 && node->filhos[index - 1]->num_chaves >= ordem/2 ) {
         emprestaDoAnterior(node, index);
@@ -497,7 +530,7 @@ void preenche(BT* node, int index, int ordem) {
  * @param k A chave a ser removida.
  * @param ordem A ordem da Árvore B.
  */
-void removeRec(BT* node, int k, int ordem) {
+void removeRec(Node* node, int k, int ordem) {
     int index = 0;
     while (index < node->num_chaves && k > node->chaves[index]) {
         index++;
@@ -535,7 +568,7 @@ void removeRec(BT* node, int k, int ordem) {
 }
 
 // Função pública para remover uma chave da Árvore B
-BT* removeKey(BT* root, int k, int ordem) {
+Node* removeKey(Node* root, int k, int ordem) {
     printf("Começando a remoção\n");
     if (!root) {
         printf("A árvore está vazia.\n");
@@ -546,7 +579,7 @@ BT* removeKey(BT* root, int k, int ordem) {
 
     // Se a raiz tiver 0 chaves após a remoção, torna o primeiro filho a nova raiz (se existir)
     if (root->num_chaves == 0) {
-        BT* tmp = root;
+        Node* tmp = root;
         if (root->ehFolha) {
             root = NULL;
         } else {

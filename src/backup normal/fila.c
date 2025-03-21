@@ -1,7 +1,7 @@
 #include "fila.h"
 
 struct queueNode {
-    BT *node;
+    Node *node;
     QueueNode *next;
 };
 
@@ -16,7 +16,7 @@ Queue* create_queue() {
     return q;
 }
 
-void enqueue(Queue *q, BT *node) {
+void enqueue(Queue *q, Node *node) {
     QueueNode *newNode = malloc(sizeof(QueueNode));
     newNode->node = node;
     newNode->next = NULL;
@@ -28,10 +28,10 @@ void enqueue(Queue *q, BT *node) {
     q->rear = newNode;
 }
 
-BT* dequeue(Queue *q) {
+Node* dequeue(Queue *q) {
     if (!q->front) return NULL;
     QueueNode *temp = q->front;
-    BT *node = temp->node;
+    Node *node = temp->node;
     q->front = q->front->next;
     if (!q->front) q->rear = NULL;
     free(temp);

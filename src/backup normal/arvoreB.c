@@ -6,14 +6,14 @@ struct arvore{
     int deslocamento; // A posição do nó  no arquivo binário (o deslocamento em bytes para acessar/atualizar este nó dentro do arquivo binario)
     int* chaves; // Este número está no intervalo [⌈t/2⌉−1, t−1] para nós internos e folhas, e entre [1,t−1] para a raiz.
     int* registros; // cada um indexado por uma chave 
-    BT** filhos; // (sempre igual ao número de chaves armazenadas + 1)
+    Node** filhos; // (sempre igual ao número de chaves armazenadas + 1)
 };
 
-void destroiBT(BT* x){
+void destroiNode(Node* x){
     if(x == NULL) return;
 
     for(int i=0; i<x->num_chaves+1; i++){
-        destroiBT(x->filhos[i]);
+        destroiNode(x->filhos[i]);
     }
 
     free(x->chaves);
@@ -22,12 +22,12 @@ void destroiBT(BT* x){
     free(x);
 }
 
-BT* criaBT(){
+Node* criaNode(){
     return NULL;
 }
 
-BT* criaNode(bool ehFolha, int ordem){
-    BT* bt = malloc(sizeof(BT));
+Node* criaNode(bool ehFolha, int ordem){
+    Node* bt = malloc(sizeof(Node));
     if(bt == NULL){ 
         perror("Memory allocation failed"); 
         exit(1);
@@ -38,7 +38,7 @@ BT* criaNode(bool ehFolha, int ordem){
 
     bt->chaves = malloc((ordem-1) * (sizeof(int)));
     bt->registros = malloc((ordem-1) * (sizeof(int)));
-    bt->filhos = malloc(ordem * sizeof(BT*));
+    bt->filhos = malloc(ordem * sizeof(Node*));
     
     for(int i=0; i<ordem; i++){
         bt->filhos[i] = NULL;
@@ -54,8 +54,8 @@ BT* criaNode(bool ehFolha, int ordem){
     return bt;
 }
 
-void divideFilho(BT* pai, int k, int ordem) {
-    BT* filho = pai->filhos[k]; //filho da esquerda
+void divideFilho(Node* pai, int k, int ordem) {
+    Node* filho = pai->filhos[k]; //filho da esquerda
 
     // printf("Dividindo nó...\n");
     // printf("Antes da divisão, chaves do filho: ");
@@ -64,7 +64,7 @@ void divideFilho(BT* pai, int k, int ordem) {
     // }
     // printf("\n");
 
-    BT* novoNode = criaNode(filho->ehFolha, ordem); //cria nó que armazena a metade superior das chaves
+    Node* novoNode = criaNode(filho->ehFolha, ordem); //cria nó que armazena a metade superior das chaves
     int meio = (ordem - 1) / 2; //(ordem - 1) / 2
     novoNode->num_chaves = filho->num_chaves - meio - 1; //meio - 1
     
@@ -107,7 +107,7 @@ void divideFilho(BT* pai, int k, int ordem) {
     // filho->registros[meio] = -1;
 }
 
-void insereNonFull(BT* x, int k, int reg, int ordem){
+void insereNonFull(Node* x, int k, int reg, int ordem){
     int i = x->num_chaves - 1;
 
     if(x->ehFolha){ //se for folha, insere direto
@@ -131,10 +131,10 @@ void insereNonFull(BT* x, int k, int reg, int ordem){
     }
 }
 
-BT* insere(BT* x, int k, int reg, int ordem){
+Node* insere(Node* x, int k, int reg, int ordem){
     if(x == NULL) { //se a árvore for vazia, cria a sua raíz
         //printf("CRIANDO RAIZ\n");
-        BT* raiz = criaNode(true, ordem);
+        Node* raiz = criaNode(true, ordem);
         raiz->registros[0] = reg;
         raiz->chaves[0] = k;
         raiz->num_chaves++;
@@ -144,7 +144,7 @@ BT* insere(BT* x, int k, int reg, int ordem){
     } else { //insere no mesmo nó se não estiver cheio, e cria outro se estiver
         //printf("INSERINDO NA ARVORE PRONTA\n");
         if(x->num_chaves == ordem-1){ //se a raiz está cheia, cria um novo nó
-            BT* novoNode = criaNode(false, ordem);
+            Node* novoNode = criaNode(false, ordem);
             novoNode->filhos[0] = x; //o novo nó se torna a raiz e o antigo nó se torna um filho
             divideFilho(novoNode, 0, ordem); //divide o antigo nó
             insereNonFull(novoNode, k, reg, ordem); //insere a chave no novo nó
@@ -155,7 +155,7 @@ BT* insere(BT* x, int k, int reg, int ordem){
     }
 }
 
-BT* busca(FILE* f, BT* x, int k){
+Node* busca(FILE* f, Node* x, int k){
     int i = 0; //printf("CHAVE: %d\n", k);
 
     while(i < x->num_chaves && k > x->chaves[i]) i++;
@@ -173,7 +173,7 @@ BT* busca(FILE* f, BT* x, int k){
     return busca(f, x->filhos[i], k);
 }
 
-void imprime(FILE* f, BT* x){
+void imprime(FILE* f, Node* x){
     fprintf(f, "\n-- ARVORE B\n");
 
     if(!x) return;
@@ -183,7 +183,7 @@ void imprime(FILE* f, BT* x){
     enqueue(q, NULL);
 
     while (!is_empty(q)) {
-        BT* node = dequeue(q);
+        Node* node = dequeue(q);
         
         if (node == NULL) {
             fprintf(f, "\n");
@@ -208,6 +208,6 @@ void imprime(FILE* f, BT* x){
     free(q);
 }
 
-int retornaNumChaves(BT* x){
+int retornaNumChaves(Node* x){
     return x->num_chaves;
 }

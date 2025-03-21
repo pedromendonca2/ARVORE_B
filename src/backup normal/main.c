@@ -8,7 +8,7 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    BT* bt = criaBT();
+    Node* bt = criaNode();
 
     FILE* input = fopen(argv[1], "r");
     if (input == NULL) {
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]){
     imprime(output, bt);
     printf("Imprimi_final\n");
 
-    destroiBT(bt);
+    destroiNode(bt);
     fclose(input);
     fclose(output);
     return 0;

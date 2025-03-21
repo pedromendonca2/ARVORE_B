@@ -3,24 +3,24 @@
 
 #include "fila.h"
 
-typedef struct arvore BT;
+typedef struct arvore Node;
 
-void destroiBT(BT* x);
+void destroiNode(Node* x);
 
-BT* criaBT();
+Node* criaNode();
 
-BT* criaNode(bool ehFolha, int ordem);
+Node* criaNode(bool ehFolha, int ordem);
 
-void divideFilho(BT* pai, int k, int ordem);
+void divideFilho(Node* pai, int k, int ordem);
 
-void insereNonFull(BT* x, int k, int reg, int ordem);
+void insereNonFull(Node* x, int k, int reg, int ordem);
 
-BT* insere(BT* x, int k, int reg, int ordem);
+Node* insere(Node* x, int k, int reg, int ordem);
 
-BT* busca(FILE* f, BT* x, int k);
+Node* busca(FILE* f, Node* x, int k);
 
-void imprime(FILE* f, BT* x);
+void imprime(FILE* f, Node* x);
 
-int retornaNumChaves(BT* x);
+int retornaNumChaves(Node* x);
 
 #endif

@@ -5,16 +5,18 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-typedef struct arvore BT;
+typedef struct node Node;
 typedef struct queue Queue;
 typedef struct queueNode QueueNode;
 
 Queue* create_queue();
 
-void enqueue(Queue *q, BT *node);
+void enqueue(Queue *q, Node *node);
 
-BT* dequeue(Queue *q);
+Node* dequeue(Queue *q);
 
 int is_empty(Queue *q);
+
+int queue_size(Queue *q);
 
 #endif

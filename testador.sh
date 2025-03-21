@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Para o script funcionar deve existir o diretório casos_teste_v5 com os arquivos de teste de entrada
-# Serão criados os arquivos de saída no diretório saidas/
+# Para o script funcionar deve existir o diretório $TEST_DIR com os arquivos de teste de entrada
+# Serão criados os arquivos de saída no diretório $OUTPUT_DIR
 # O script compila o código e executa os testes
+# Pode escolher usar o valgrind para verificar vazamentos de memória
 # Uso: ./testador.sh [valgrind]
-# Pode escolher usar o valgrind
 
 # Variáveis
-TEST_DIR="caso_teste_v5"
+TEST_DIR="caso_teste_v6"
 OUTPUT_DIR="saidas"
 BIN="./trab2"
 VALGRIND="valgrind"
@@ -48,7 +48,8 @@ test() {
         fi
     done
 }
-# Verifica os argumentos passados para o script
+
+mkdir -p $OUTPUT_DIR
 make clean
 make
 if [ "$1" == "valgrind" ]; then

@@ -3,12 +3,10 @@
 #define MAX_LINHA 50
 
 int main(int argc, char* argv[]){
-    if (argc < 3) {
+    if (argc < 2) {
         fprintf(stderr, "Uso: %s <arquivo de entrada> <arquivo de saida>\n", argv[0]);
         return 1;
     }
-
-    BT* bt = criaBT();
 
     FILE* input = fopen(argv[1], "r");
     if (input == NULL) {
@@ -30,6 +28,8 @@ int main(int argc, char* argv[]){
     fscanf(input, "%d", &num_operacoes);
     fgetc(input);
 
+    BT* bt = criaBT(ordem);
+
     for(int i=0; i<num_operacoes; i++){
         fgets(linha, sizeof(linha), input);
         char *ptr = linha;
@@ -41,30 +41,30 @@ int main(int argc, char* argv[]){
         if (sscanf(linha, "%c %d , %d", &operacao, &n1, &n2) == 3) {
             //printf("%c %d %d\n", operacao, n1, n2);
             if (operacao == 'I') {
-                printf("Inseri\n");
-                bt = insere(bt, n1, n2, ordem);
-                printf("Inseri_final\n");
+                //printf("Inseri\n");
+                insere(bt, n1, n2);
+                //printf("Inseri_final\n");
             }
-        } else if (sscanf(linha, " %c %d", &operacao, &n1) == 2) {
-            //printf("Entrei aqui\n");
+        } else if (sscanf(linha, "%c %d", &operacao, &n1) == 2) {
+            ////printf("Entrei aqui\n");
             if (operacao == 'R') {
-                printf("Começando a remoção\n");
-                bt = removeKey(bt, n1, ordem);
+                // //printf("Removi\n");
+                // remover(n1);
             } else if (operacao == 'B') {
-                printf("Busquei\n");
+                //printf("Busquei\n");
                 busca(output, bt, n1);
-                printf("Busquei_final\n");
+                //printf("Busquei_final\n");
             }
         } else{
-            printf("Operação inválida\n");
-            printf("%s\n", linha);
+            //printf("Operação inválida\n");
+            //printf("%s\n", linha);
             exit(1);
         }
     }
 
-    printf("Imprimi\n");
+    //printf("Imprimi\n");
     imprime(output, bt);
-    printf("Imprimi_final\n");
+    //printf("Imprimi_final\n");
 
     destroiBT(bt);
     fclose(input);
