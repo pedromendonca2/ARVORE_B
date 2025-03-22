@@ -82,7 +82,7 @@ void divideFilho(BT* bt, Node* pai, int k) {
     
     int meio = 0;
     if (bt->ordem % 2 == 0) { // Ordem par
-        meio = bt->ordem / 2 - 1;
+        meio = (bt->ordem / 2) - 1;
     } else { // Ordem ímpar
         meio = bt->ordem / 2;
     }
@@ -586,12 +586,13 @@ void removeRec(Node* node, int k, int ordem) {
 }
 
 // Função pública para remover uma chave da Árvore B
-Node* removeKey(Node* root, int k, int ordem) {
+void removeKey(BT* x, int k, int ordem) {
     
+    Node* root = x -> raiz;
     printf("Começando a remoção\n");
     if (!root) {
         printf("A árvore está vazia.\n");
-        return root;
+        return;
     }
 
     removeRec(root, k, ordem);
@@ -610,7 +611,7 @@ Node* removeKey(Node* root, int k, int ordem) {
 
         free(tmp); // Libera a memória da antiga raiz
     }
-    return root;
+    x -> raiz = root;
 }
 
 int encontrar_posicao(struct node *no, int chave) {

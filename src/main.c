@@ -49,7 +49,7 @@ int main(int argc, char* argv[]){
             ////printf("Entrei aqui\n");
             if (operacao == 'R') {
                 // //printf("Removi\n");
-                // removeKey(bt, n1, ordem);
+                removeKey(bt, n1, ordem);
             } else if (operacao == 'B') {
                 //printf("Busquei\n");
                 busca(output, bt, n1);

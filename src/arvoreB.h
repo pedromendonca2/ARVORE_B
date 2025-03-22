@@ -143,6 +143,6 @@ int retornaNumChaves(Node* x);
  * @param ordem A ordem da Árvore B.
  * @return A nova raiz da Árvore B (pode mudar se a raiz original ficar vazia).
  */
-Node* removeKey(Node* root, int k, int ordem);
+void removeKey(BT* x, int k, int ordem);
 
 #endif
