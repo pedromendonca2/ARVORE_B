@@ -122,7 +122,7 @@ void busca(FILE* f, BT* bt, int k);
  * @param f Um ponteiro para o arquivo onde a árvore será impressa.
  * @param x A raiz da Árvore B a ser impressa.
  */
-void imprime(FILE* f, Node* x);
+void imprime(FILE* f, BT* x);
 
 /**
  * @brief Retorna o número de chaves em um nó da Árvore B.
