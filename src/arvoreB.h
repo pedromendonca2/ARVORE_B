@@ -6,6 +6,15 @@
 typedef struct arvore BT;          // Estrutura que representa a Árvore B
 typedef struct node Node;          // Estrutura que representa um nó da Árvore B
 
+
+// Getters
+int getNumKeys(Node* node);
+int getIsLeaf(Node* node);
+int getPosInDisk(Node* node);
+int* getKeys(Node* node);
+Node** getKids(Node* node);
+
+
 /**
  * @brief Destrói um nó da Árvore B e seus descendentes (libera a memória alocada).
  *

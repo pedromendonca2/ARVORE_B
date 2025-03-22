@@ -1,6 +1,150 @@
 #include "arvoreB.h"
 #include <math.h>
 
+// Estrutura para manipular o arquivo binário
+typedef struct {
+    int posicaoRoot;
+    int posicaoLivre;
+    FILE *arqBinario;
+} bin;
+
+// Função para calcular o offset no arquivo binário
+int calculate_offset(int diskID, int order) {
+    return diskID * (sizeof(int) * (order - 1) + sizeof(int) * order + sizeof(int) * 3);
+}
+
+// Função para criar um arquivo binário e colocar o ponteiro na struct bin
+bin *create_bin() {
+    bin *b = calloc(1, sizeof(bin));
+    FILE *fp = fopen("arvoreB.bin", "wb+"); // "wb+" permite leitura e escrita
+    if (!fp) {
+        perror("Erro ao criar arquivo binário");
+        exit(EXIT_FAILURE);
+    }
+    b->arqBinario = fp;
+    b->posicaoRoot = -1;
+    b->posicaoLivre = 0; // Primeiro nó após o cabeçalho
+    return b;
+}
+
+// Função para fechar o arquivo binário
+void close_bin(bin* bin) {
+    fclose(bin->arqBinario);
+    free(bin);
+}
+
+// Função para calcular a próxima posição livre no arquivo binário
+void calculaProximaPosicaoLivre(bin *bin, int order) {
+    bin->posicaoLivre += (sizeof(int) * (order - 1) + sizeof(int) * order + sizeof(int) * 3);
+}
+
+int diskSearch(FILE* fp, int ordem, int chave, int posicaoRoot) {
+    // Lê o nó atual do arquivo binário usando disk_read
+    Node* node = disk_read(posicaoRoot, ordem, fp, NULL);
+
+    // Busca a chave no nó atual
+    int i = 0;
+    while (i < getNumKeys(node) && chave > getKeysValues(node, i)) {
+        i++;
+    }
+
+    // Se a chave for encontrada, retorna o deslocamento do nó
+    if (i < getNumKeys(node) && chave == getKeysValues(node, i)) {
+        int posInDisk = getPosInDisk(node); // Usa o getter para obter o deslocamento
+        destroiNode(node); // Libera a memória do nó lido
+        return posInDisk;
+    }
+
+    // Se o nó for folha, a chave não está na árvore
+    if (getIsLeaf(node)) { // Usa o getter para verificar se é folha
+        destroiNode(node); // Libera a memória do nó lido
+        return -1; // Chave não encontrada
+    }
+
+    // Caso contrário, desce para o filho apropriado
+    int childOffset = getKidsValues(node, i); // Usa o getter para obter o deslocamento do filho
+    destroiNode(node); // Libera a memória do nó lido
+
+    if (childOffset == -1) {
+        return -1; // Chave não encontrada
+    }
+
+    // Chama recursivamente a função para o filho
+    return diskSearch(fp, ordem, chave, childOffset);
+}
+// Função para ler um nó da árvore B de um arquivo binário
+Node *disk_read(int diskID, int order, FILE *fp, bin *bin) {
+    int offset = calculate_offset(diskID, order);
+    fseek(fp, offset, SEEK_SET); // Posiciona o ponteiro do arquivo no offset correto
+
+    int numKeys, isLeaf, pos_in_disk;
+
+    if (fread(&numKeys, sizeof(int), 1, fp) != 1 ||
+        fread(&isLeaf, sizeof(int), 1, fp) != 1 ||
+        fread(&pos_in_disk, sizeof(int), 1, fp) != 1) {
+        perror("Erro ao ler do arquivo");
+        exit(EXIT_FAILURE);
+    }
+
+    Node *nodeLido = readNode(numKeys, isLeaf, order, bin);
+
+    int *keys = (int *)calloc(order - 1, sizeof(int));
+    int *kids = (int *)malloc(order * sizeof(int));
+
+    if (!keys || !kids) {
+        perror("Falha na alocação de memória");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fread(keys, sizeof(int), order - 1, fp) != order - 1 ||
+        fread(kids, sizeof(int), order, fp) != order) {
+        perror("Erro ao ler chaves ou filhos do arquivo");
+        exit(EXIT_FAILURE);
+    }
+
+    setPosInDisk(nodeLido, pos_in_disk);
+
+    for (int i = 0; i < order - 1; i++)
+        setKeysValues(nodeLido, keys[i], i);
+    for (int i = 0; i < order; i++)
+        setKidsValues(nodeLido, kids[i], i);
+
+    free(keys);
+    free(kids);
+
+    return nodeLido;
+}
+
+// Função para criar um nó da árvore B a partir de um arquivo binário
+Node *readNode(int numKeys, int isLeaf, int order, bin *bin) {
+    Node *node = createNode(order, isLeaf);
+    setNumKeys(node, numKeys);
+    return node;
+}
+
+// Função para escrever um nó da árvore B em um arquivo binário
+void disk_write(Node *node, int order, FILE *fp) {
+    int offset = calculate_offset(getPosInDisk(node), order);
+    fseek(fp, offset, SEEK_SET); // Posiciona o ponteiro do arquivo no offset correto
+
+    int numKeys = getNumKeys(node);
+    int isLeaf = getIsLeaf(node);
+    int posInDisk = getPosInDisk(node);
+
+    if (fwrite(&numKeys, sizeof(int), 1, fp) != 1 ||
+        fwrite(&isLeaf, sizeof(int), 1, fp) != 1 ||
+        fwrite(&posInDisk, sizeof(int), 1, fp) != 1) {
+        perror("Erro ao escrever no arquivo");
+        exit(EXIT_FAILURE);
+    }
+
+    if (fwrite(getKeys(node), sizeof(int), order - 1, fp) != order - 1 ||
+        fwrite(getKids(node), sizeof(int), order, fp) != order) {
+        perror("Erro ao escrever chaves ou filhos no arquivo");
+        exit(EXIT_FAILURE);
+    }
+}
+
 struct arvore{
     int ordem;
     int num_nodes;
@@ -15,6 +159,46 @@ struct node{
     int* registros; // cada um indexado por uma chave 
     Node** filhos; // (sempre igual ao número de chaves armazenadas + 1)
 };
+
+// Getters e Setters
+int getNumKeys(Node* node) {
+    return node->num_chaves;
+}
+
+int getIsLeaf(Node* node) {
+    return node->ehFolha;
+}
+
+int getPosInDisk(Node* node) {
+    return node->deslocamento;
+}
+
+int* getKeys(Node* node) {
+    return node->chaves;
+}
+
+Node** getKids(Node* node) {
+    return node->filhos;
+}
+
+int getKeysValues(Node* node, int index) {
+    return node->chaves[index];
+}
+
+int getKidsValues(Node* node, int index) {
+    return node->filhos[index]->deslocamento;
+}
+
+void setKeysValues(Node* node, int value, int index) {
+    node->chaves[index] = value;
+}
+
+void setKidsValues(Node* node, int deslocamento, int index) {
+    // Cria um novo nó filho com o deslocamento especificado
+    Node* filho = malloc(sizeof(Node));
+    filho->deslocamento = deslocamento;
+    node->filhos[index] = filho;
+}
 
 void removeRec(Node* node, int k, int ordem);
 
@@ -82,7 +266,7 @@ void divideFilho(BT* bt, Node* pai, int k) {
     
     int meio = 0;
     if (bt->ordem % 2 == 0) { // Ordem par
-        meio = (bt->ordem / 2) - 1;
+        meio = bt->ordem / 2 - 1;
     } else { // Ordem ímpar
         meio = bt->ordem / 2;
     }
@@ -129,7 +313,7 @@ void divideFilho(BT* bt, Node* pai, int k) {
 // ... (código anterior: structs, criaNode, divideFilho - a divideFilho está correta agora) ...
 
 // Função recursiva para inserir uma chave na árvore B
-Node* insereNode(BT* bt, Node* node, int chave, int reg) {
+int insereNode(BT* bt, Node* node, int chave, int reg) {
     if (node == NULL) {
         // Árvore vazia, cria o primeiro nó (raiz)
         Node* novoNode = criaNode(bt, true);
@@ -203,6 +387,7 @@ void insere(BT* bt, int chave, int reg) {
         bt->raiz = novaRaiz; // Atualiza a raiz da árvore
     }
 }
+
 Node* buscaNode(FILE* f, Node* x, int k){
     int i = 0; //printf("CHAVE: %d\n", k);
 
@@ -378,9 +563,7 @@ void removeDeFolha(Node* node, int index) {
  *      removida pelo seu predecessor e remove recursivamente o predecessor.
  *   2. Se o filho sucessor tiver chaves suficientes, substitui a chave a ser
  *      removida pelo seu sucessor e remove recursivamente o sucessor.
- *   3. Se nenhum dos filhos adjacentes tiver chaves suficientes, mescla os dois
- *      filhos, move a chave do pai para o nó mesclado e remove recursivamente
- *      a chave do nó mesclado.
+ *   3. Se nenhum dos filhos adjacentes tiver chaves suficientes, mescla-os e remove k do nó mesclado
  *
  * @param node O nó não folha.
  * @param index O índice da chave a ser removida.
@@ -502,8 +685,6 @@ void emprestaDoProximo(Node* node, int index) {
     irmao->num_chaves--;
 }
 
-
-
 /**
  * @brief Função interna que garante que um nó filho tenha pelo menos o número mínimo de chaves
  *        após uma remoção.
@@ -586,13 +767,12 @@ void removeRec(Node* node, int k, int ordem) {
 }
 
 // Função pública para remover uma chave da Árvore B
-void removeKey(BT* x, int k, int ordem) {
+Node* removeKey(Node* root, int k, int ordem) {
     
-    Node* root = x -> raiz;
     printf("Começando a remoção\n");
     if (!root) {
         printf("A árvore está vazia.\n");
-        return;
+        return root;
     }
 
     removeRec(root, k, ordem);
@@ -611,7 +791,7 @@ void removeKey(BT* x, int k, int ordem) {
 
         free(tmp); // Libera a memória da antiga raiz
     }
-    x -> raiz = root;
+    return root;
 }
 
 int encontrar_posicao(struct node *no, int chave) {
@@ -620,5 +800,176 @@ int encontrar_posicao(struct node *no, int chave) {
         i++;
     }
     return i;
+}
+
+void insereBinario(int chave, int reg, int ordem, FILE* fp, bin *bin) {
+    if (!fp || !bin) {
+        printf("Erro: arquivo ou estrutura binária inválida.\n");
+        return;
+    }
+
+    // Lê a posição da raiz do início do arquivo binário
+    Node* root = disk_read(bin->posicaoRoot, ordem, fp, bin);
+
+    if (!root) {
+        // Árvore vazia, cria o primeiro nó
+        Node* novoNode = criaNode(ordem, 1);
+        setKeysValues(novoNode, chave, 0);
+        setNumKeys(novoNode, 1);
+        setPosInDisk(novoNode, bin->posicaoLivre);
+
+        // Atualiza a posição da raiz
+        bin->posicaoRoot = bin->posicaoLivre;
+        bin->posicaoLivre += (sizeof(int) * (ordem - 1) + sizeof(int) * ordem + sizeof(int) * 3);
+
+        // Escreve o novo nó no arquivo binário
+        disk_write(novoNode, ordem, fp);
+        destroiNode(novoNode);
+    } else {
+        // Insere na árvore existente
+        Node* novaRaiz = insereNodeBinario(root, chave, reg, ordem, fp, bin);
+
+        // Se houve mudança na raiz, atualiza no arquivo binário usando `disk_write`
+        if (getPosInDisk(novaRaiz) != bin->posicaoRoot) {
+            bin->posicaoRoot = getPosInDisk(novaRaiz);
+            disk_write(novaRaiz, ordem, fp);
+        }
+
+        destroiNode(root);
+        if (novaRaiz != root) {
+            destroiNode(novaRaiz);
+        }
+    }
+
+    // Sempre atualiza a raiz no arquivo binário
+    disk_write(root, ordem, fp);
+}
+
+
+// Função auxiliar modificada para trabalhar com arquivo
+Node* insereNodeBinario(Node* node, int chave, int reg, int ordem, FILE* fp, bin* bin) {
+    if (node == NULL) {
+        Node* novoNode = criaNode(ordem, 1);
+        novoNode->chaves[0] = chave;
+        novoNode->registros[0] = reg;
+        novoNode->num_chaves = 1;
+        
+        // Calcula nova posição no arquivo
+        fseek(fp, 0, SEEK_END);
+        novoNode->deslocamento = ftell(fp);
+        
+        disk_write(novoNode, ordem, fp);
+        return novoNode;
+    }
+
+    // ...resto do código de inserção existente, mas adicionando disk_write após cada modificação...
+
+    if (node->ehFolha) {
+        // ...código de inserção em folha...
+        disk_write(node, ordem, fp);
+    } else {
+        // ...código de inserção em nó interno...
+        Node* filho = disk_read(node->filhos[i]->deslocamento, ordem, fp, bin);
+        Node* novoFilho = insereNodeBinario(filho, chave, reg, ordem, fp, bin);
+        node->filhos[i] = novoFilho;
+        
+        if (novoFilho->num_chaves == ordem) {
+            divideFilhoBinario(node, i, ordem, fp, bin);
+        }
+        
+        disk_write(node, ordem, fp);
+    }
+    
+    return node;
+}
+
+Node* insereNode2Binario(Node* node, int chave, int reg, int ordem, FILE* fp, bin* bin) {
+    int i = node->num_chaves - 1;
+
+    if (node->ehFolha) {
+        // Move as chaves maiores para abrir espaço
+        while (i >= 0 && chave < node->chaves[i]) {
+            node->chaves[i + 1] = node->chaves[i];
+            node->registros[i + 1] = node->registros[i];
+            i--;
+        }
+        
+        // Insere a nova chave
+        node->chaves[i + 1] = chave;
+        node->registros[i + 1] = reg;
+        node->num_chaves++;
+        
+        disk_write(node, ordem, fp);
+    } else {
+        // Encontra o filho correto
+        while (i >= 0 && chave < node->chaves[i]) {
+            i--;
+        }
+        i++;
+        
+        Node* filho = disk_read(node->filhos[i]->deslocamento, ordem, fp, bin);
+        
+        if (filho->num_chaves == ordem - 1) {
+            // Filho está cheio, precisa dividir
+            divideFilhoBinario(node, i, ordem, fp, bin);
+            if (chave > node->chaves[i]) {
+                i++;
+            }
+            filho = disk_read(node->filhos[i]->deslocamento, ordem, fp, bin);
+        }
+        
+        insereNodeBinario(filho, chave, reg, ordem, fp, bin);
+    }
+    
+    return node;
+}
+
+void divideFilhoBinario(Node* pai, int i, int ordem, FILE* fp, bin* bin) {
+    Node* filho = disk_read(pai->filhos[i]->deslocamento, ordem, fp, bin);
+    Node* novoNode = criaNode(ordem, filho->ehFolha);
+    
+    // Calcula nova posição no arquivo para o novo nó
+    fseek(fp, 0, SEEK_END);
+    novoNode->deslocamento = ftell(fp);
+    
+    int t = ordem / 2;
+    novoNode->num_chaves = t - 1;
+    
+    // Copia as chaves maiores para o novo nó
+    for (int j = 0; j < t - 1; j++) {
+        novoNode->chaves[j] = filho->chaves[j + t];
+        novoNode->registros[j] = filho->registros[j + t];
+    }
+    
+    // Se não for folha, copia também os ponteiros dos filhos
+    if (!filho->ehFolha) {
+        for (int j = 0; j < t; j++) {
+            novoNode->filhos[j] = filho->filhos[j + t];
+        }
+    }
+    
+    filho->num_chaves = t - 1;
+    
+    // Move os filhos do pai para abrir espaço para o novo filho
+    for (int j = pai->num_chaves; j >= i + 1; j--) {
+        pai->filhos[j + 1] = pai->filhos[j];
+    }
+    
+    pai->filhos[i + 1] = novoNode;
+    
+    // Move as chaves do pai
+    for (int j = pai->num_chaves - 1; j >= i; j--) {
+        pai->chaves[j + 1] = pai->chaves[j];
+        pai->registros[j + 1] = pai->registros[j];
+    }
+    
+    pai->chaves[i] = filho->chaves[t - 1];
+    pai->registros[i] = filho->registros[t - 1];
+    pai->num_chaves++;
+    
+    // Escreve todos os nós modificados no disco
+    disk_write(filho, ordem, fp);
+    disk_write(novoNode, ordem, fp);
+    disk_write(pai, ordem, fp);
 }
 

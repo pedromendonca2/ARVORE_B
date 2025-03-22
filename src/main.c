@@ -1,73 +1,54 @@
 #include "arvoreB.h"
-
 #define MAX_LINHA 50
 
-int main(int argc, char* argv[]){
-    if (argc < 2) {
+int main(int argc, char* argv[]) {
+    if (argc < 3) {
         fprintf(stderr, "Uso: %s <arquivo de entrada> <arquivo de saida>\n", argv[0]);
         return 1;
     }
 
     FILE* input = fopen(argv[1], "r");
-    if (input == NULL) {
-        perror("Erro ao abrir o arquivo de entrada");
-        return 1;
-    }
-
     FILE* output = fopen(argv[2], "w");
-    if (output == NULL) {
-        perror("Erro ao abrir o arquivo de saída");
-        fclose(input);
+    FILE* binFile = fopen(ARQUIVO_TMP, "w+b");
+
+    if (!input || !output || !binFile) {
+        perror("Erro ao abrir arquivos");
         return 1;
     }
-
-    char linha[MAX_LINHA];
 
     int ordem, num_operacoes;
-    fscanf(input, "%d", &ordem);
-    fscanf(input, "%d", &num_operacoes);
-    fgetc(input);
+    fscanf(input, "%d %d", &ordem, &num_operacoes);
+    fgetc(input); // Consume newline
 
-    BT* bt = criaBT(ordem);
+    // Initialize binary file with root offset
+    int rootOffset = -1;
+    fwrite(&rootOffset, sizeof(int), 1, binFile);
 
-    for(int i=0; i<num_operacoes; i++){
+    char linha[MAX_LINHA];
+    for(int i = 0; i < num_operacoes; i++) {
         fgets(linha, sizeof(linha), input);
-        char *ptr = linha;
-        while (*ptr == ' ') ptr++;
-
         char operacao;
-        int n1=0, n2=0;
+        int n1 = 0, n2 = 0;
 
         if (sscanf(linha, "%c %d , %d", &operacao, &n1, &n2) == 3) {
-            //printf("%c %d %d\n", operacao, n1, n2);
             if (operacao == 'I') {
-                //printf("Inseri\n");
-                insere(bt, n1, n2);
-                //printf("Inseri_final\n");
+                insere(n1, n2, ordem, binFile);
             }
         } else if (sscanf(linha, "%c %d", &operacao, &n1) == 2) {
-            ////printf("Entrei aqui\n");
-            if (operacao == 'R') {
-                // //printf("Removi\n");
-                removeKey(bt, n1, ordem);
-            } else if (operacao == 'B') {
-                //printf("Busquei\n");
-                busca(output, bt, n1);
-                //printf("Busquei_final\n");
+            if (operacao == 'B') {
+                busca(output, binFile, n1, ordem);
+            } else if (operacao == 'R') {
+                remove_key(n1, ordem, binFile);
             }
-        } else{
-            //printf("Operação inválida\n");
-            //printf("%s\n", linha);
-            exit(1);
         }
     }
 
-    //printf("Imprimi\n");
-    imprime(output, bt);
-    //printf("Imprimi_final\n");
+    // Print final tree state
+    imprime_arvore(output, binFile, ordem);
 
-    destroiBT(bt);
     fclose(input);
     fclose(output);
+    fclose(binFile);
+    remove(ARQUIVO_TMP); // Clean up temporary binary file
     return 0;
 }
