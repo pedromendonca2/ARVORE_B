@@ -8,6 +8,18 @@ typedef struct {
     FILE *arqBinario;
 } bin;
 
+int getposicaoRoot(bin* bin) {
+    return bin->posicaoRoot;
+}
+
+int getposicaoLivre(bin* bin) {
+    return bin->posicaoLivre;
+}
+
+FILE *getarqBinario(bin* bin) {
+    return bin->arqBinario;
+}
+
 // Função para calcular o offset no arquivo binário
 int calculate_offset(int diskID, int order) {
     return diskID * (sizeof(int) * (order - 1) + sizeof(int) * order + sizeof(int) * 3);
@@ -827,111 +839,39 @@ void insereBinario(int chave, int reg, int ordem, FILE* fp, bin *bin) {
         destroiNode(novoNode);
     } else {
         // Insere na árvore existente
-        Node* novaRaiz = insereNodeBinario(root, chave, reg, ordem, fp, bin);
+        if (root->num_chaves == ordem - 1) {
+            // Se a raiz está cheia, cria uma nova raiz e divide
+            Node* novaRaiz = criaNode(ordem, 0);
+            setPosInDisk(novaRaiz, bin->posicaoLivre);
+            bin->posicaoLivre += (sizeof(int) * (ordem - 1) + sizeof(int) * ordem + sizeof(int) * 3);
 
-        // Se houve mudança na raiz, atualiza no arquivo binário usando `disk_write`
-        if (getPosInDisk(novaRaiz) != bin->posicaoRoot) {
+            novaRaiz->filhos[0] = root;
+            divideFilhoBinario(novaRaiz, 0, ordem, fp, bin);
+
+            // Insere a chave na nova raiz
+            insereNodeBinario(novaRaiz, chave, reg, ordem, fp, bin);
+
+            // Atualiza a raiz
             bin->posicaoRoot = getPosInDisk(novaRaiz);
             disk_write(novaRaiz, ordem, fp);
-        }
-
-        destroiNode(root);
-        if (novaRaiz != root) {
             destroiNode(novaRaiz);
+        } else {
+            // Insere diretamente na raiz existente
+            insereNodeBinario(root, chave, reg, ordem, fp, bin);
         }
+
+        // Escreve a raiz atualizada no arquivo binário
+        disk_write(root, ordem, fp);
+        destroiNode(root);
     }
-
-    // Sempre atualiza a raiz no arquivo binário
-    disk_write(root, ordem, fp);
-}
-
-
-// Função auxiliar modificada para trabalhar com arquivo
-Node* insereNodeBinario(Node* node, int chave, int reg, int ordem, FILE* fp, bin* bin) {
-    if (node == NULL) {
-        Node* novoNode = criaNode(ordem, 1);
-        novoNode->chaves[0] = chave;
-        novoNode->registros[0] = reg;
-        novoNode->num_chaves = 1;
-        
-        // Calcula nova posição no arquivo
-        fseek(fp, 0, SEEK_END);
-        novoNode->deslocamento = ftell(fp);
-        
-        disk_write(novoNode, ordem, fp);
-        return novoNode;
-    }
-
-    // ...resto do código de inserção existente, mas adicionando disk_write após cada modificação...
-
-    if (node->ehFolha) {
-        // ...código de inserção em folha...
-        disk_write(node, ordem, fp);
-    } else {
-        // ...código de inserção em nó interno...
-        Node* filho = disk_read(node->filhos[i]->deslocamento, ordem, fp, bin);
-        Node* novoFilho = insereNodeBinario(filho, chave, reg, ordem, fp, bin);
-        node->filhos[i] = novoFilho;
-        
-        if (novoFilho->num_chaves == ordem) {
-            divideFilhoBinario(node, i, ordem, fp, bin);
-        }
-        
-        disk_write(node, ordem, fp);
-    }
-    
-    return node;
-}
-
-Node* insereNode2Binario(Node* node, int chave, int reg, int ordem, FILE* fp, bin* bin) {
-    int i = node->num_chaves - 1;
-
-    if (node->ehFolha) {
-        // Move as chaves maiores para abrir espaço
-        while (i >= 0 && chave < node->chaves[i]) {
-            node->chaves[i + 1] = node->chaves[i];
-            node->registros[i + 1] = node->registros[i];
-            i--;
-        }
-        
-        // Insere a nova chave
-        node->chaves[i + 1] = chave;
-        node->registros[i + 1] = reg;
-        node->num_chaves++;
-        
-        disk_write(node, ordem, fp);
-    } else {
-        // Encontra o filho correto
-        while (i >= 0 && chave < node->chaves[i]) {
-            i--;
-        }
-        i++;
-        
-        Node* filho = disk_read(node->filhos[i]->deslocamento, ordem, fp, bin);
-        
-        if (filho->num_chaves == ordem - 1) {
-            // Filho está cheio, precisa dividir
-            divideFilhoBinario(node, i, ordem, fp, bin);
-            if (chave > node->chaves[i]) {
-                i++;
-            }
-            filho = disk_read(node->filhos[i]->deslocamento, ordem, fp, bin);
-        }
-        
-        insereNodeBinario(filho, chave, reg, ordem, fp, bin);
-    }
-    
-    return node;
 }
 
 void divideFilhoBinario(Node* pai, int i, int ordem, FILE* fp, bin* bin) {
     Node* filho = disk_read(pai->filhos[i]->deslocamento, ordem, fp, bin);
     Node* novoNode = criaNode(ordem, filho->ehFolha);
-    
-    // Calcula nova posição no arquivo para o novo nó
-    fseek(fp, 0, SEEK_END);
-    novoNode->deslocamento = ftell(fp);
-    
+    novoNode->deslocamento = bin->posicaoLivre; // Nova posição do nó
+    bin->posicaoLivre++; // Atualiza a posição livre
+
     int t = ordem / 2;
     novoNode->num_chaves = t - 1;
     

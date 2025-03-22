@@ -1,6 +1,6 @@
 #include "arvoreB.h"
 #define MAX_LINHA 50
-
+#define ARQUIVO_TMP "arvoreB.bin"
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Uso: %s <arquivo de entrada> <arquivo de saida>\n", argv[0]);
@@ -16,6 +16,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    bin *bin = create_bin(); 
     int ordem, num_operacoes;
     fscanf(input, "%d %d", &ordem, &num_operacoes);
     fgetc(input); // Consume newline
@@ -32,12 +33,12 @@ int main(int argc, char* argv[]) {
 
         if (sscanf(linha, "%c %d , %d", &operacao, &n1, &n2) == 3) {
             if (operacao == 'I') {
-                insere(n1, n2, ordem, binFile);
+                insereBinario(n1, n2, ordem, binFile, bin);
             }
         } else if (sscanf(linha, "%c %d", &operacao, &n1) == 2) {
             if (operacao == 'B') {
-                busca(output, binFile, n1, ordem);
-            } else if (operacao == 'R') {
+                diskSearch(binFile, ordem, n1, getposicaoRoot(bin));
+                } else if (operacao == 'R') {
                 remove_key(n1, ordem, binFile);
             }
         }

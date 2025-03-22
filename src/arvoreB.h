@@ -5,7 +5,7 @@
 
 typedef struct arvore BT;          // Estrutura que representa a Árvore B
 typedef struct node Node;          // Estrutura que representa um nó da Árvore B
-
+typedef struct bin bin;
 
 // Getters
 int getNumKeys(Node* node);
@@ -14,7 +14,11 @@ int getPosInDisk(Node* node);
 int* getKeys(Node* node);
 Node** getKids(Node* node);
 
-
+int getposicaoRoot(bin* bin);
+int getposicaoLivre(bin* bin);
+FILE *getarqBinario(bin* bin);
+bin* create_bin();
+void insereBinario(int chave, int reg, int ordem, FILE* fp, bin* bin);
 /**
  * @brief Destrói um nó da Árvore B e seus descendentes (libera a memória alocada).
  *
@@ -152,6 +156,6 @@ int retornaNumChaves(Node* x);
  * @param ordem A ordem da Árvore B.
  * @return A nova raiz da Árvore B (pode mudar se a raiz original ficar vazia).
  */
-void removeKey(BT* x, int k, int ordem);
+Node* removeKey(Node* root, int k, int ordem);
 
 #endif
