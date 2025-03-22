@@ -806,14 +806,6 @@ Node* removeKey(Node* root, int k, int ordem) {
     return root;
 }
 
-int encontrar_posicao(struct node *no, int chave) {
-    int i = 0;
-    while (i < no->num_chaves && chave > no->chaves[i]) {
-        i++;
-    }
-    return i;
-}
-
 void insereBinario(int chave, int reg, int ordem, FILE* fp, bin *bin) {
     if (!fp || !bin) {
         printf("Erro: arquivo ou estrutura binária inválida.\n");

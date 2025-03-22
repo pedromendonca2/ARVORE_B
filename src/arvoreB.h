@@ -7,18 +7,61 @@ typedef struct arvore BT;          // Estrutura que representa a Árvore B
 typedef struct node Node;          // Estrutura que representa um nó da Árvore B
 typedef struct bin bin;
 
-// Getters
+// Getters e Setters
 int getNumKeys(Node* node);
 int getIsLeaf(Node* node);
 int getPosInDisk(Node* node);
 int* getKeys(Node* node);
 Node** getKids(Node* node);
+int getKeysValues(Node* node, int index);
+int getKidsValues(Node* node, int index);
+void setKeysValues(Node* node, int value, int index);
+void setKidsValues(Node* node, int deslocamento, int index);
 
+// Funções para manipular a estrutura binária
 int getposicaoRoot(bin* bin);
 int getposicaoLivre(bin* bin);
 FILE *getarqBinario(bin* bin);
 bin* create_bin();
+void close_bin(bin* bin);
+void calculaProximaPosicaoLivre(bin* bin, int order);
+
+// Funções para manipular nós da Árvore B
+Node* criaNode(int ordem, int ehFolha);
+void destroiNode(Node* x);
+int retornaNumChaves(Node* x);
+
+// Funções para manipular a Árvore B
+BT* criaBT(int ordem);
+void destroiBT(BT* x);
+void insere(BT* bt, int chave, int reg);
+Node* buscaNode(FILE* f, Node* x, int k);
+void busca(FILE* f, BT* bt, int k);
+void imprime(FILE* f, BT* bt);
+
+// Funções para manipular o arquivo binário
+Node* disk_read(int diskID, int order, FILE* fp, bin* bin);
+void disk_write(Node* node, int order, FILE* fp);
+int diskSearch(FILE* fp, int ordem, int chave, int posicaoRoot);
+
+// Funções auxiliares para inserção
+void divideFilho(BT* bt, Node* pai, int k);
 void insereBinario(int chave, int reg, int ordem, FILE* fp, bin* bin);
+void divideFilhoBinario(Node* pai, int i, int ordem, FILE* fp, bin* bin);
+void insereNodeBinario(Node* node, int chave, int reg, int ordem, FILE* fp, bin* bin);
+
+// Funções auxiliares para remoção
+Node* removeKey(Node* root, int k, int ordem);
+void removeRec(Node* node, int k, int ordem);
+void removeDeFolha(Node* node, int index);
+void removeDeNaoFolha(Node* node, int index, int ordem);
+int encontraPredecessor(Node* node, int index);
+int encontraSucessor(Node* node, int index);
+void mergeFilhos(Node* node, int index, int ordem);
+void emprestaDoAnterior(Node* node, int index);
+void emprestaDoProximo(Node* node, int index);
+void preenche(Node* node, int index, int ordem);
+
 /**
  * @brief Destrói um nó da Árvore B e seus descendentes (libera a memória alocada).
  *
